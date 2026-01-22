@@ -11,14 +11,26 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
 const PORT = Number(process.env.PORT || 3001);
-const CORS_ORIGIN = process.env.CORS_ORIGIN ||
-    process.env.FRONTEND_ORIGIN ||
-    "http://localhost:5173";
-const corsOrigins = CORS_ORIGIN.split(",")
+const DEFAULT_DEV_ORIGIN = "http://localhost:5173";
+const rawOrigins = [
+    process.env.FRONT_URL,
+    process.env.CORS_ORIGIN,
+    process.env.FRONTEND_ORIGIN,
+    DEFAULT_DEV_ORIGIN,
+]
+    .filter(Boolean)
+    .join(",");
+const corsOrigins = Array.from(new Set(rawOrigins
+    .split(",")
     .map((origin) => origin.trim())
-    .filter(Boolean);
+    .filter(Boolean)));
 app.use((0, cors_1.default)({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+        if (!origin || corsOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error(`Origin ${origin} no permitido por CORS`));
+    },
     credentials: true,
 }));
 app.use(express_1.default.json({ limit: "64kb" }));

@@ -9,17 +9,32 @@ const app = express();
 app.set("trust proxy", 1);
 
 const PORT = Number(process.env.PORT || 3001);
-const CORS_ORIGIN =
-  process.env.CORS_ORIGIN ||
-  process.env.FRONTEND_ORIGIN ||
-  "http://localhost:5173";
-const corsOrigins = CORS_ORIGIN.split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const DEFAULT_DEV_ORIGIN = "http://localhost:5173";
+const rawOrigins = [
+  process.env.FRONT_URL,
+  process.env.CORS_ORIGIN,
+  process.env.FRONTEND_ORIGIN,
+  DEFAULT_DEV_ORIGIN,
+]
+  .filter(Boolean)
+  .join(",");
+const corsOrigins = Array.from(
+  new Set(
+    rawOrigins
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  )
+);
 
 app.use(
   cors({
-    origin: corsOrigins,
+    origin: (origin, callback) => {
+      if (!origin || corsOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} no permitido por CORS`));
+    },
     credentials: true,
   })
 );
